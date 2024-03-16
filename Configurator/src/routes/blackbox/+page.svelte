@@ -366,6 +366,22 @@
 			maxValue: 40,
 			unit: 'm/s²',
 			decimals: 3
+		},
+		LOG_REL_ALT: {
+			name: 'vVel -> alt',
+			path: 'motion.relAlt',
+			minValue: -5,
+			maxValue: 5,
+			unit: 'm',
+			decimals: 2
+		},
+		LOG_REL_VVEL: {
+			name: 'Rel. vVel',
+			path: 'motion.relVVel',
+			minValue: -10,
+			maxValue: 10,
+			unit: 'm/s',
+			decimals: 2
 		}
 	} as {
 		[key: string]: {
@@ -538,6 +554,20 @@
 			],
 			unit: '',
 			exact: true
+		},
+		GEN_REL_VVEL: {
+			name: 'Rel. vVel',
+			replaces: 'LOG_REL_VVEL',
+			requires: ['LOG_VERTICAL_ACCEL'],
+			unit: 'm/s',
+			exact: false
+		},
+		GEN_REL_ALT: {
+			name: 'Rel. Altitude',
+			replaces: 'LOG_REL_ALT',
+			requires: [['LOG_REL_VVEL', 'GEN_REL_VVEL']],
+			unit: 'm',
+			exact: false
 		}
 	} as {
 		[key: string]: {
@@ -799,6 +829,18 @@
 							f.motors.out.fr = Math.min(f.motors.out.fr!, 2000);
 							f.motors.out.rl = Math.min(f.motors.out.rl!, 2000);
 							f.motors.out.fl = Math.min(f.motors.out.fl!, 2000);
+						});
+						break;
+					case 'GEN_REL_VVEL':
+						log.frames.forEach((f, i) => {
+							f.motion.relVVel =
+								(f.motion.accelVertical! - 9.81) / log.framesPerSecond +
+								(log.frames[i - 1]?.motion.relVVel || 0);
+						});
+					case 'GEN_REL_ALT':
+						log.frames.forEach((f, i) => {
+							f.motion.relAlt =
+								f.motion.relVVel! / log.framesPerSecond + (log.frames[i - 1]?.motion.relAlt || 0);
 						});
 						break;
 				}
