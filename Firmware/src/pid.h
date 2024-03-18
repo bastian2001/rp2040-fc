@@ -8,7 +8,7 @@
 #define P_SHIFT 11
 #define I_SHIFT 3
 #define D_SHIFT 10
-#define FF_SHIFT D_SHIFT
+#define FF_SHIFT 13
 #define S_SHIFT 8 // setpoint follow
 
 extern i16 bmiDataRaw[6];

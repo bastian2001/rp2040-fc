@@ -33,7 +33,7 @@
 #define LOG_FLIGHT_MODE 1 << 28      // 1 byte
 #define LOG_ALTITUDE 1 << 29         // 2 bytes
 #define LOG_VVEL 1 << 30             // 2 bytes
-#define LOG_GPS 1 << 31              // 2 bytes
+#define LOG_GPS 1U << 31             // 2 bytes
 #define LOG_ATT_ROLL 1LL << 32       // 2 bytes
 #define LOG_ATT_PITCH 1LL << 33      // 2 bytes
 #define LOG_ATT_YAW 1LL << 34        // 2 bytes

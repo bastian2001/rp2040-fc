@@ -448,7 +448,7 @@ void __not_in_flash_func(writeSingleFrame)() {
 	}
 	if (currentBBFlags & LOG_VERTICAL_ACCEL) {
 		extern fix32 accel;
-		i16 a                 = (i16)(accel.getRaw() >> 6);
+		i16 a                 = (i16)(accel.getRaw() >> 9);
 		bbBuffer[bufferPos++] = a;
 		bbBuffer[bufferPos++] = a >> 8;
 	}

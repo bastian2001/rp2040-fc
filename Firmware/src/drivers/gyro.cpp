@@ -115,7 +115,7 @@ int gyroInit() {
 	data = 0x03; // +/- 16g
 	regWrite(SPI_GYRO, PIN_GYRO_CS, (u8)GyroReg::ACC_RANGE, &data, 1, 500);
 	// GYR_CONF: gyr_filter_perf (7) | gyr_noise_perf (6) | gyr_bwp (5...4) | gyr_odr (3...0)
-	data = 1 << 7 | 1 << 6 | 0x02 << 4 | 0x0D; // performance optimized, 3200Hz
+	data = 1 << 7 | 1 << 6 | 0x00 << 4 | 0x0D; // performance optimized, 3200Hz
 	regWrite(SPI_GYRO, PIN_GYRO_CS, (u8)GyroReg::GYR_CONF, &data, 1, 500);
 	// GYR_RANGE: ois_range (3) | gyr_range (2...0)
 	data = 0x00; // +/- 2000dps

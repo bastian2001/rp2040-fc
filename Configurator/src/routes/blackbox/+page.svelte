@@ -659,40 +659,59 @@
 					case 'GEN_ROLL_PID_D':
 						log.frames.forEach((f, i) => {
 							f.pid.roll.d =
-								(f.gyro.roll! - (log.frames[i - 1]?.gyro.roll || 0)) * log.pidConstants[0][2];
+								((f.gyro.roll! - (log.frames[i - 1]?.gyro.roll || 0)) * log.pidConstants[0][2]) /
+								log.frequencyDivider;
 						});
 						break;
 					case 'GEN_PITCH_PID_D':
 						log.frames.forEach((f, i) => {
 							f.pid.pitch.d =
-								(f.gyro.pitch! - (log.frames[i - 1]?.gyro.pitch || 0)) * log.pidConstants[1][2];
+								((f.gyro.pitch! - (log.frames[i - 1]?.gyro.pitch || 0)) * log.pidConstants[1][2]) /
+								log.frequencyDivider;
 						});
 						break;
 					case 'GEN_YAW_PID_D':
 						log.frames.forEach((f, i) => {
 							f.pid.yaw.d =
-								(f.gyro.yaw! - (log.frames[i - 1]?.gyro.yaw || 0)) * log.pidConstants[2][2];
+								((f.gyro.yaw! - (log.frames[i - 1]?.gyro.yaw || 0)) * log.pidConstants[2][2]) /
+								log.frequencyDivider;
 						});
 						break;
 					case 'GEN_ROLL_PID_FF':
-						log.frames.forEach((f, i) => {
-							f.pid.roll.ff =
-								(f.setpoint.roll! - log.frames[i - 1]?.setpoint.roll! || 0) *
-								log.pidConstants[0][3];
-						});
+						{
+							const step = Math.round(8 / log.frequencyDivider) || 1;
+							const divider = (step * log.frequencyDivider) / 8;
+							log.frames.forEach((f, i) => {
+								f.pid.roll.ff =
+									((f.setpoint.roll! - log.frames[i - step]?.setpoint.roll! || 0) *
+										log.pidConstants[0][3]) /
+									divider;
+							});
+						}
 						break;
 					case 'GEN_PITCH_PID_FF':
-						log.frames.forEach((f, i) => {
-							f.pid.pitch.ff =
-								(f.setpoint.pitch! - log.frames[i - 1]?.setpoint.pitch! || 0) *
-								log.pidConstants[1][3];
-						});
+						{
+							const step = Math.round(8 / log.frequencyDivider) || 1;
+							const divider = step * log.frequencyDivider;
+							log.frames.forEach((f, i) => {
+								f.pid.pitch.ff =
+									((f.setpoint.pitch! - log.frames[i - step]?.setpoint.pitch! || 0) *
+										log.pidConstants[1][3]) /
+									divider;
+							});
+						}
 						break;
 					case 'GEN_YAW_PID_FF':
-						log.frames.forEach((f, i) => {
-							f.pid.yaw.ff =
-								(f.setpoint.yaw! - log.frames[i - 1]?.setpoint.yaw! || 0) * log.pidConstants[2][3];
-						});
+						{
+							const step = Math.round(8 / log.frequencyDivider) || 1;
+							const divider = step * log.frequencyDivider;
+							log.frames.forEach((f, i) => {
+								f.pid.yaw.ff =
+									((f.setpoint.yaw! - log.frames[i - step]?.setpoint.yaw! || 0) *
+										log.pidConstants[2][3]) /
+									divider;
+							});
+						}
 						break;
 					case 'GEN_ROLL_PID_S':
 						log.frames.forEach((f) => {
@@ -974,7 +993,7 @@
 			pidConstantsNice[i][2] = pidConstants[i][2] >> 10;
 			pidConstants[i][2] /= 65536;
 			pidConstants[i][3] = leBytesToInt(pcBytes.slice(i * 28 + 12, i * 28 + 16));
-			pidConstantsNice[i][3] = pidConstants[i][3] >> 10;
+			pidConstantsNice[i][3] = pidConstants[i][3] >> 13;
 			pidConstants[i][3] /= 65536;
 			pidConstants[i][4] = leBytesToInt(pcBytes.slice(i * 28 + 16, i * 28 + 20));
 			pidConstantsNice[i][4] = pidConstants[i][4] >> 8;
@@ -1314,7 +1333,7 @@
 					leBytesToInt(
 						data.slice(i + offsets['LOG_VERTICAL_ACCEL'], i + offsets['LOG_VERTICAL_ACCEL'] + 2),
 						true
-					) / 1024;
+					) / 128;
 			}
 			log.push(frame);
 		}

@@ -127,8 +127,7 @@ void __not_in_flash_func(updatePitchRollValues)() {
 	accel += sinFix((fix32)pitch) * accelDataRaw[1] * RAW_TO_M2_PER_SEC;
 	vVelHelper += (accel - 9.81f) / 3200;
 	vVelHelper = fix32(0.9999f) * vVelHelper + 0.0001f * baroUpVel; // this leaves a steady-state error if the accelerometer has a DC offset
-	preHelper  = vVelHelper - preHelper;
-	vVel += preHelper;
+	vVel += vVelHelper - preHelper;
 	f32 measVel;
 	if (gpsStatus.fixType == FIX_3D) {
 		measVel = -gpsMotion.velD * 0.0000001f;

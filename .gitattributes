@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+*.PrjPCB linguist-language=Altium
+other/Info*and*Datasheet*PDFs -linguist-detectable

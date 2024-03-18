@@ -33,6 +33,8 @@ fix32 altSetpoint;
 fix32 tRR, tRL, tFR, tFL;
 fix32 throttle;
 
+fix32 rollSetpoints[8], pitchSetpoints[8], yawSetpoints[8];
+
 u32 pidLoopCounter = 0;
 
 fix32 rateFactors[5][3];
@@ -290,6 +292,8 @@ void pidLoop() {
 		rollErrorSum += rollError;
 		pitchErrorSum += pitchError;
 		yawErrorSum += yawError;
+		static u32 ffBufPos = 0;
+
 		rollP   = pidGains[0][P] * rollError;
 		pitchP  = pidGains[1][P] * pitchError;
 		yawP    = pidGains[2][P] * yawError;
@@ -299,12 +303,18 @@ void pidLoop() {
 		rollD   = pidGains[0][D] * (imuData[AXIS_ROLL] - rollLast);
 		pitchD  = pidGains[1][D] * (imuData[AXIS_PITCH] - pitchLast);
 		yawD    = pidGains[2][D] * (imuData[AXIS_YAW] - yawLast);
-		rollFF  = pidGains[0][FF] * (rollSetpoint - rollLastSetpoint);
-		pitchFF = pidGains[1][FF] * (pitchSetpoint - pitchLastSetpoint);
-		yawFF   = pidGains[2][FF] * (yawSetpoint - yawLastSetpoint);
+		rollFF  = pidGains[0][FF] * (rollSetpoint - rollSetpoints[ffBufPos]);
+		pitchFF = pidGains[1][FF] * (pitchSetpoint - pitchSetpoints[ffBufPos]);
+		yawFF   = pidGains[2][FF] * (yawSetpoint - yawSetpoints[ffBufPos]);
 		rollS   = pidGains[0][S] * rollSetpoint;
 		pitchS  = pidGains[1][S] * pitchSetpoint;
 		yawS    = pidGains[2][S] * yawSetpoint;
+
+		rollSetpoints[ffBufPos]  = rollSetpoint;
+		pitchSetpoints[ffBufPos] = pitchSetpoint;
+		yawSetpoints[ffBufPos]   = yawSetpoint;
+		ffBufPos++;
+		ffBufPos &= 7;
 
 		fix32 rollTerm  = rollP + rollI + rollD + rollFF + rollS;
 		fix32 pitchTerm = pitchP + pitchI + pitchD + pitchFF + pitchS;
