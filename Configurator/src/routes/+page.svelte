@@ -223,7 +223,7 @@
 	onMount(() => {
 		getRotationInterval = setInterval(() => {
 			port.sendCommand(ConfigCmd.GET_ROTATION).catch(() => {});
-		}, 50);
+		}, 20);
 		getGpsData = setInterval(() => {
 			port
 				.sendCommand(ConfigCmd.GET_GPS_ACCURACY)

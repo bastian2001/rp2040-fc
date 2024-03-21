@@ -10,6 +10,8 @@ FSInfo64 fsInfo;
 int currentLogNum = 0;
 u8 bbFreqDivider  = 2;
 
+RingBuffer<u8 *> bbFramePtrBuffer(64);
+
 File blackboxFile;
 
 i32 maxFileSize = 0;
@@ -291,19 +293,19 @@ void __not_in_flash_func(writeSingleFrame)() {
 		bbBuffer[bufferPos++] = setpoint >> 8;
 	}
 	if (currentBBFlags & LOG_ROLL_GYRO_RAW) {
-		i16 gyroData          = (imuData[AXIS_ROLL].getRaw() >> 12);
-		bbBuffer[bufferPos++] = gyroData;
-		bbBuffer[bufferPos++] = gyroData >> 8;
+		i16 i                 = (gyroData[AXIS_ROLL].getRaw() >> 12);
+		bbBuffer[bufferPos++] = i;
+		bbBuffer[bufferPos++] = i >> 8;
 	}
 	if (currentBBFlags & LOG_PITCH_GYRO_RAW) {
-		i16 gyroData          = (imuData[AXIS_PITCH].getRaw() >> 12);
-		bbBuffer[bufferPos++] = gyroData;
-		bbBuffer[bufferPos++] = gyroData >> 8;
+		i16 i                 = (gyroData[AXIS_PITCH].getRaw() >> 12);
+		bbBuffer[bufferPos++] = i;
+		bbBuffer[bufferPos++] = i >> 8;
 	}
 	if (currentBBFlags & LOG_YAW_GYRO_RAW) {
-		i16 gyroData          = (imuData[AXIS_YAW].getRaw() >> 12);
-		bbBuffer[bufferPos++] = gyroData;
-		bbBuffer[bufferPos++] = gyroData >> 8;
+		i16 i                 = (gyroData[AXIS_YAW].getRaw() >> 12);
+		bbBuffer[bufferPos++] = i;
+		bbBuffer[bufferPos++] = i >> 8;
 	}
 	if (currentBBFlags & LOG_ROLL_PID_P) {
 		bbBuffer[bufferPos++] = rollP.getInt();
@@ -446,21 +448,59 @@ void __not_in_flash_func(writeSingleFrame)() {
 		memcpy(&bbBuffer[bufferPos], accelDataRaw, 6);
 		bufferPos += 6;
 	}
+	if (currentBBFlags & LOG_ACCEL_FILTERED) {
+		i16 i                 = accelDataFiltered[0];
+		bbBuffer[bufferPos++] = i;
+		bbBuffer[bufferPos++] = i >> 8;
+		i                     = accelDataFiltered[1];
+		bbBuffer[bufferPos++] = i;
+		bbBuffer[bufferPos++] = i >> 8;
+		i                     = accelDataFiltered[2];
+		bbBuffer[bufferPos++] = i;
+		bbBuffer[bufferPos++] = i >> 8;
+	}
 	if (currentBBFlags & LOG_VERTICAL_ACCEL) {
-		extern fix32 accel;
-		i16 a                 = (i16)(accel.getRaw() >> 9);
+		i16 a                 = (i16)(vAccel.getRaw() >> 9);
 		bbBuffer[bufferPos++] = a;
 		bbBuffer[bufferPos++] = a >> 8;
 	}
 #if BLACKBOX_STORAGE == LITTLEFS
 	blackboxFile.write(bbBuffer, bufferPos);
 #elif BLACKBOX_STORAGE == SD_BB
-	((u8 *)bbBuffer)[0] = bufferPos - 1;
-	if (rp2040.fifo.push_nb((u32)bbBuffer)) {
-		bbFrameNum++;
+	bbBuffer[0] = bufferPos - 1;
+	bbFrameNum++;
+	if (bbFramePtrBuffer.isEmpty()) {
+		if (!rp2040.fifo.push_nb((u32)bbBuffer)) {
+			bbFramePtrBuffer.push(bbBuffer);
+		}
+	} else if (!bbFramePtrBuffer.isFull()) {
+		bbFramePtrBuffer.push(bbBuffer);
+		for (u32 i = bbFramePtrBuffer.itemCount(); i; i--) {
+			u8 *frame = bbFramePtrBuffer[0];
+			if (rp2040.fifo.push_nb((u32)frame)) {
+				bbFramePtrBuffer.pop();
+			} else {
+				break;
+			}
+		}
 	} else {
-		free(bbBuffer);
-		// if the fifo is full, we just drop the frame :(
+		u8 *frame = bbFramePtrBuffer[0];
+		if (rp2040.fifo.push_nb((u32)frame)) {
+			bbFramePtrBuffer.pop();
+			bbFramePtrBuffer.push(bbBuffer);
+			for (u32 i = bbFramePtrBuffer.itemCount(); i; i--) {
+				u8 *frame = bbFramePtrBuffer[0];
+				if (rp2040.fifo.push_nb((u32)frame)) {
+					bbFramePtrBuffer.pop();
+				} else {
+					break;
+				}
+			}
+		} else {
+			free(bbBuffer);
+			bbFrameNum--;
+			// Both FIFOs are full, we can't keep up with the logging, dropping oldest frame
+		}
 	}
 #endif
 }

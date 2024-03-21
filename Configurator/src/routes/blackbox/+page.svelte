@@ -359,6 +359,15 @@
 			decimals: 3,
 			usesModifier: true
 		},
+		LOG_ACCEL_FILTERED: {
+			name: 'Accel Filtered',
+			path: 'motion.accelFiltered',
+			minValue: -40,
+			maxValue: 40,
+			unit: 'm/s²',
+			decimals: 3,
+			usesModifier: true
+		},
 		LOG_VERTICAL_ACCEL: {
 			name: 'Vertical Accel',
 			path: 'motion.accelVertical',
@@ -1023,7 +1032,7 @@
 			if (flagIsSet) {
 				flags.push(Object.keys(BB_ALL_FLAGS)[i + 32]);
 				offsets[Object.keys(BB_ALL_FLAGS)[i + 32]] = frameSize;
-				if (i + 32 === 35 || i + 32 === 36) frameSize += 6;
+				if ([35, 36, 37].includes(i + 32)) frameSize += 6;
 				else frameSize += 2;
 			}
 		}
@@ -1037,7 +1046,7 @@
 				gyro: {},
 				pid: { roll: {}, pitch: {}, yaw: {} },
 				motors: { out: {}, rpm: {} },
-				motion: { gps: {}, accelRaw: {} },
+				motion: { gps: {}, accelRaw: {}, accelFiltered: {} },
 				attitude: {}
 			};
 			if (flags.includes('LOG_ROLL_ELRS_RAW'))
@@ -1327,6 +1336,19 @@
 				frame.motion.accelRaw.x = (leBytesToInt(accelBytes.slice(0, 2), true) * 9.81) / 2048;
 				frame.motion.accelRaw.y = (leBytesToInt(accelBytes.slice(2, 4), true) * 9.81) / 2048;
 				frame.motion.accelRaw.z = (leBytesToInt(accelBytes.slice(4, 6), true) * 9.81) / 2048;
+			}
+			if (flags.includes('LOG_ACCEL_FILTERED')) {
+				const accelBytes = data.slice(
+					i + offsets['LOG_ACCEL_FILTERED'],
+					i + offsets['LOG_ACCEL_FILTERED'] + 6
+				);
+				frame.motion.accelFiltered.x = (leBytesToInt(accelBytes.slice(0, 2), true) * 9.81) / 2048;
+				frame.motion.accelFiltered.y = (leBytesToInt(accelBytes.slice(2, 4), true) * 9.81) / 2048;
+				frame.motion.accelFiltered.z = (leBytesToInt(accelBytes.slice(4, 6), true) * 9.81) / 2048;
+				if (i === frameSize * 20) {
+					console.log(accelBytes);
+					console.log(frame.motion.accelFiltered);
+				}
 			}
 			if (flags.includes('LOG_VERTICAL_ACCEL')) {
 				frame.motion.accelVertical =

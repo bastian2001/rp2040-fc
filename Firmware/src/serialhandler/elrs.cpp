@@ -390,7 +390,6 @@ void ExpressLRS::processMessage() {
 		errorCount++;
 		msgBufIndex -= size;
 		crc = 0;
-		// Serial.printf("Unknown command: %d, size: %d\n", msgBuffer[2], size);
 		// shift all the bytes in the buffer to the left by size
 		for (int i = 0; i < msgBufIndex; i++)
 			msgBuffer[i] = msgBuffer[i + size];

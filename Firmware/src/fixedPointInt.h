@@ -154,6 +154,10 @@ public:
 		fix32 result;
 		return result.setRaw(this->value * other);
 	};
+	inline fix32 operator*(const i32 other) const {
+		fix32 result;
+		return result.setRaw(this->value * other);
+	};
 	inline fix32 operator*(const f64 other) const {
 		return *this * fix32(other);
 	};

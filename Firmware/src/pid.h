@@ -14,7 +14,7 @@
 extern i16 bmiDataRaw[6];
 extern i16 *gyroDataRaw;
 extern i16 *accelDataRaw;
-extern fix32 imuData[6];
+extern fix32 gyroData[3];
 extern fix32 rateFactors[5][3];
 enum {
 	P,

@@ -15,12 +15,11 @@ FLIGHT_MODE flightMode = FLIGHT_MODE::ACRO;
  * and calculations will be performed on a 16.16 fixed point number.
  * Additions can be performed like normal, while multiplications require
  * the numbers to be converted to 64 bit before calculation.
- * Accel data is also 16.16 bit fixed point math, just the unit is g.
  */
 
 i16 throttles[4];
 
-fix32 imuData[6];
+fix32 gyroData[3];
 
 fix32 pidGains[3][7];
 fix32 pidGainsVVel[3], pidGainsHVel[3];
@@ -147,13 +146,11 @@ void pidLoop() {
 	tasks[TASK_GYROREAD].runCounter++;
 	gyroGetData(bmiDataRaw);
 	for (int i = 0; i < 3; i++) {
-		imuData[i].setRaw((i32)gyroDataRaw[i] * 4000); // gyro data in range of -.5 ... +.5 due to fixed point math,gyro data in range of -2000 ... +2000 (degrees per second)
-													   // imuData[i + 3].setRaw(accelDataRaw[i]);
-													   // imuData[i + 3] *= 32;
+		gyroData[i].setRaw((i32)gyroDataRaw[i] * 4000); // gyro data in range of -.5 ... +.5 due to fixed point math,gyro data in range of -2000 ... +2000 (degrees per second)
 	}
-	imuData[AXIS_PITCH] = -imuData[AXIS_PITCH];
-	imuData[AXIS_YAW]   = -imuData[AXIS_YAW];
-	duration            = taskTimerGyro;
+	gyroData[AXIS_PITCH] = -gyroData[AXIS_PITCH];
+	gyroData[AXIS_YAW]   = -gyroData[AXIS_YAW];
+	duration             = taskTimerGyro;
 	tasks[TASK_GYROREAD].totalDuration += duration;
 	if (duration > tasks[TASK_GYROREAD].maxDuration)
 		tasks[TASK_GYROREAD].maxDuration = duration;
@@ -250,7 +247,7 @@ void pidLoop() {
 				vVelErrorSum = constrain(vVelErrorSum, vVelMinErrorSum, vVelMaxErrorSum);
 				vVelP        = pidGainsVVel[P] * vVelError;
 				vVelI        = pidGainsVVel[I] * vVelErrorSum;
-				vVelD        = pidGainsVVel[D] * (vVelError - vVelLast) * 5;
+				vVelD        = pidGainsVVel[D] * (vVelError - vVelLast);
 				throttle     = vVelP + vVelI + vVelD;
 				throttle     = constrain(throttle.getInt(), IDLE_PERMILLE * 2, 2000);
 			} else {
@@ -275,9 +272,9 @@ void pidLoop() {
 				yawSetpoint += rateFactors[i][2] * polynomials[i][2];
 			}
 		}
-		rollError  = rollSetpoint - imuData[AXIS_ROLL];
-		pitchError = pitchSetpoint - imuData[AXIS_PITCH];
-		yawError   = yawSetpoint - imuData[AXIS_YAW];
+		rollError  = rollSetpoint - gyroData[AXIS_ROLL];
+		pitchError = pitchSetpoint - gyroData[AXIS_PITCH];
+		yawError   = yawSetpoint - gyroData[AXIS_YAW];
 		if (ELRS->channels[2] > 1020)
 			takeoffCounter++;
 		else if (takeoffCounter < 1000) // 1000 = ca. 0.3s
@@ -300,9 +297,9 @@ void pidLoop() {
 		rollI   = pidGains[0][I] * rollErrorSum;
 		pitchI  = pidGains[1][I] * pitchErrorSum;
 		yawI    = pidGains[2][I] * yawErrorSum;
-		rollD   = pidGains[0][D] * (imuData[AXIS_ROLL] - rollLast);
-		pitchD  = pidGains[1][D] * (imuData[AXIS_PITCH] - pitchLast);
-		yawD    = pidGains[2][D] * (imuData[AXIS_YAW] - yawLast);
+		rollD   = pidGains[0][D] * (gyroData[AXIS_ROLL] - rollLast);
+		pitchD  = pidGains[1][D] * (gyroData[AXIS_PITCH] - pitchLast);
+		yawD    = pidGains[2][D] * (gyroData[AXIS_YAW] - yawLast);
 		rollFF  = pidGains[0][FF] * (rollSetpoint - rollSetpoints[ffBufPos]);
 		pitchFF = pidGains[1][FF] * (pitchSetpoint - pitchSetpoints[ffBufPos]);
 		yawFF   = pidGains[2][FF] * (yawSetpoint - yawSetpoints[ffBufPos]);
@@ -393,9 +390,9 @@ void pidLoop() {
 		for (int i = 0; i < 4; i++)
 			throttles[i] = throttles[i] > 2000 ? 2000 : throttles[i];
 		sendThrottles(throttles);
-		rollLast          = imuData[AXIS_ROLL];
-		pitchLast         = imuData[AXIS_PITCH];
-		yawLast           = imuData[AXIS_YAW];
+		rollLast          = gyroData[AXIS_ROLL];
+		pitchLast         = gyroData[AXIS_PITCH];
+		yawLast           = gyroData[AXIS_YAW];
 		rollLastSetpoint  = rollSetpoint;
 		pitchLastSetpoint = pitchSetpoint;
 		yawLastSetpoint   = yawSetpoint;

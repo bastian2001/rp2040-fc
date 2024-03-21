@@ -339,7 +339,7 @@
 			{/each}
 		</select>
 	{/if}
-	{#if flagName === 'LOG_ACCEL_RAW'}
+	{#if flagName === 'LOG_ACCEL_RAW' || flagName === 'LOG_ACCEL_FILTERED'}
 		<select name="accelModifier" id="accelModifier" bind:value={modifier} style="width: auto">
 			{#each ['X', 'Y', 'Z'] as m}
 				<option value={m}>{m}</option>

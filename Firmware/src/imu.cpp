@@ -15,7 +15,11 @@ const f32 RAW_TO_RAD_PER_SEC  = PI * 4000 / 65536 / 180; // 2000deg per second, 
 const f32 FRAME_TIME          = 1. / 3200;
 const f32 RAW_TO_HALF_ANGLE   = RAW_TO_RAD_PER_SEC * FRAME_TIME / 2;
 const f32 ANGLE_CHANGE_LIMIT  = .0002;
-const fix32 RAW_TO_M2_PER_SEC = 9.81 * 32 / 65536; // +/-16g
+const fix32 RAW_TO_M2_PER_SEC = (9.81 * 32 + 0.5) / 65536; // +/-16g (0.5 for rounding)
+
+const i32 accelFilterCoeffs[17] = {1, 16, 120, 560, 1820, 4368, 8008, 11440, 12870, 11440, 8008, 4368, 1820, 560, 120, 16, 1}; // 65536
+i32 accelHistory[3][17];
+i32 accelDataFiltered[3];
 
 f32 pitch, roll, yaw;
 i32 headMotAtt;      // heading of motion by attitude, i.e. yaw but with pitch/roll compensation
@@ -23,6 +27,7 @@ i32 combinedHeading; // NOT heading of motion, but heading of quad
 i32 combinedHeadMot; // heading of motion, but with headingAdjustment applied
 fix32 vVel, combinedAltitude, vVelHelper;
 fix32 eVel, nVel;
+fix32 vAccel;
 
 Quaternion q;
 
@@ -35,10 +40,6 @@ void imuInit() {
 	q.v[1] = 0;
 	q.v[2] = 0;
 	initFixTrig();
-}
-
-f32 map(f32 x, f32 in_min, f32 in_max, f32 out_min, f32 out_max) {
-	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 void __not_in_flash_func(updateFromGyro)() {
@@ -56,6 +57,18 @@ void __not_in_flash_func(updateFromGyro)() {
 
 f32 orientation_vector[3];
 void __not_in_flash_func(updateFromAccel)() {
+	// filter accel data
+	for (u32 i = 0; i < 3; i++) {
+		int sum = 0;
+		for (u32 j = 16; j; j--) {
+			accelHistory[i][j] = accelHistory[i][j - 1];
+			sum += accelHistory[i][j] * accelFilterCoeffs[j];
+		}
+		accelHistory[i][0] = accelDataRaw[i];
+		sum += accelDataRaw[i] * accelFilterCoeffs[0];
+		accelDataFiltered[i] = sum >> 16;
+	}
+
 	// Formula from http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/transforms/index.htm
 	// p2.x = w*w*p1.x + 2*y*w*p1.z - 2*z*w*p1.y + x*x*p1.x + 2*y*x*p1.y + 2*z*x*p1.z - z*z*p1.x - y*y*p1.x;
 	// p2.y = 2*x*y*p1.x + y*y*p1.y + 2*z*y*p1.z + 2*w*z*p1.x - z*z*p1.y + w*w*p1.y - 2*x*w*p1.z - x*x*p1.y;
@@ -66,13 +79,13 @@ void __not_in_flash_func(updateFromAccel)() {
 	orientation_vector[1] = q.v[1] * q.v[2] * -2 + q.w * q.v[0] * 2;
 	orientation_vector[2] = -q.v[2] * q.v[2] + q.v[1] * q.v[1] + q.v[0] * q.v[0] - q.w * q.w;
 
-	f32 accelVectorNorm = sqrtf((int)accelDataRaw[1] * (int)accelDataRaw[1] + (int)accelDataRaw[0] * (int)accelDataRaw[0] + (int)accelDataRaw[2] * (int)accelDataRaw[2]);
+	f32 accelVectorNorm = sqrtf(accelDataFiltered[1] * accelDataFiltered[1] + accelDataFiltered[0] * accelDataFiltered[0] + accelDataFiltered[2] * accelDataFiltered[2]);
 	f32 accelVector[3];
 	if (accelVectorNorm > 0.01f) {
 		f32 invAccelVectorNorm = 1 / accelVectorNorm;
-		accelVector[0]         = invAccelVectorNorm * accelDataRaw[1];
-		accelVector[1]         = invAccelVectorNorm * accelDataRaw[0];
-		accelVector[2]         = invAccelVectorNorm * -accelDataRaw[2];
+		accelVector[0]         = invAccelVectorNorm * accelDataFiltered[1];
+		accelVector[1]         = invAccelVectorNorm * accelDataFiltered[0];
+		accelVector[2]         = invAccelVectorNorm * -accelDataFiltered[2];
 	} else
 		return;
 	Quaternion shortest_path;
@@ -102,7 +115,6 @@ void __not_in_flash_func(updateFromAccel)() {
 	Quaternion_normalize(&q, &q);
 }
 
-fix32 accel;
 void __not_in_flash_func(updatePitchRollValues)() {
 	roll  = atan2f(2 * (q.w * q.v[0] - q.v[1] * q.v[2]), 1 - 2 * (q.v[0] * q.v[0] + q.v[1] * q.v[1]));
 	pitch = asinf(2 * (q.w * q.v[1] + q.v[2] * q.v[0]));
@@ -122,10 +134,10 @@ void __not_in_flash_func(updatePitchRollValues)() {
 		combinedHeadMot = combinedHeading;
 	fix32 preHelper = vVelHelper;
 	startFixTrig();
-	accel = cosFix((fix32)roll) * cosFix((fix32)pitch) * accelDataRaw[2] * RAW_TO_M2_PER_SEC;
-	accel += sinFix((fix32)roll) * cosFix((fix32)pitch) * accelDataRaw[0] * RAW_TO_M2_PER_SEC;
-	accel += sinFix((fix32)pitch) * accelDataRaw[1] * RAW_TO_M2_PER_SEC;
-	vVelHelper += (accel - 9.81f) / 3200;
+	vAccel = cosFix((fix32)roll) * cosFix((fix32)pitch) * accelDataFiltered[2] * RAW_TO_M2_PER_SEC;
+	vAccel += sinFix((fix32)roll) * cosFix((fix32)pitch) * accelDataFiltered[0] * RAW_TO_M2_PER_SEC;
+	vAccel += sinFix((fix32)pitch) * accelDataFiltered[1] * RAW_TO_M2_PER_SEC;
+	vVelHelper += (vAccel - 9.81f) / 3200;
 	vVelHelper = fix32(0.9999f) * vVelHelper + 0.0001f * baroUpVel; // this leaves a steady-state error if the accelerometer has a DC offset
 	vVel += vVelHelper - preHelper;
 	f32 measVel;

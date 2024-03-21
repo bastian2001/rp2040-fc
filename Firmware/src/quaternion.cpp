@@ -83,7 +83,6 @@ void Quaternion_normalize(Quaternion *q, Quaternion *output) {
 
 	f32 len = Quaternion_norm(q);
 	if (len == 0) {
-		// Serial.printf("q: %f, %f, %f, %f\n", q->w, q->v[0], q->v[1], q->v[2]);
 		Quaternion_setIdentity(output);
 		return;
 	}

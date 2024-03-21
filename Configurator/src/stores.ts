@@ -176,7 +176,7 @@ function createPort() {
 			invoke('serial_open', { path: portToOpen })
 				.then(() => {
 					cmdEnabled = true;
-					readInterval = setInterval(read, 20);
+					readInterval = setInterval(read, 5);
 					pingInterval = setInterval(() => {
 						sendCommand(ConfigCmd.CONFIGURATOR_PING).catch(() => {});
 						pingStarted = Date.now();

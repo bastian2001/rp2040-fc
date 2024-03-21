@@ -39,7 +39,8 @@
 #define LOG_ATT_YAW 1LL << 34        // 2 bytes
 #define LOG_MOTOR_RPM 1LL << 35      // 6 bytes
 #define LOG_ACCEL_RAW 1LL << 36      // 6 bytes
-#define LOG_VERTICAL_ACCEL 1LL << 37 // 2 bytes
+#define LOG_ACCEL_FILTERED 1LL << 37 // 6 bytes
+#define LOG_VERTICAL_ACCEL 1LL << 38 // 2 bytes
 
 #define LOG_HEAD_MAGIC 0
 #define LOG_HEAD_BB_VERSION 4
