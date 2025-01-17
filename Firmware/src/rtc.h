@@ -10,12 +10,12 @@ enum TimeQuality : u8 {
 	TIME_QUALITY_CONFIRMED = 4,
 };
 extern u8 rtcTimeQuality; // TIME_QUALITY_...
+extern i16 rtcTimezoneOffset; // RTC has UTC time, this is the offset to local time, e.g. +60 for GMT+1
 
 void rtcInit();
 bool rtcSetDatetime(datetime_t *t, u8 quality, bool hasDotw = true);
 void rtcConvertToDatetime(u32 timestamp, datetime_t *t);
 time_t rtcGetUnixTimestamp();
-u32 rtcGetBlackboxTimestamp();
 void setDotwInDatetime(datetime_t *t);
 inline bool rtcGetDatetime(datetime_t *t) {
 	return rtc_get_datetime(t);

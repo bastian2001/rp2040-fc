@@ -178,7 +178,7 @@ void startLogging() {
 		0x20, 0x27, 0xA1, 0x99, 0, 0, 1 // magic bytes, version
 	};
 	blackboxFile.write(data, 7);
-	u32 recordTime = rtcGetBlackboxTimestamp();
+	u32 recordTime = rtcGetUnixTimestamp();
 	blackboxFile.write((u8 *)&recordTime, 4);
 	blackboxFile.write((u8)0); // 3200Hz gyro
 	blackboxFile.write((u8)bbFreqDivider);
@@ -447,6 +447,16 @@ void __not_in_flash_func(writeSingleFrame)() {
 		int h = combinedHeading.raw >> 3;
 		bbBuffer[bufferPos++] = h;
 		bbBuffer[bufferPos++] = h >> 8;
+	}
+	if (currentBBFlags & LOG_HVEL) {
+		// same as vvel: 8.8 fixed point in m/s, +-128m/s max, 4mm/s resolution
+		// first nVel (north positive), then eVel (east positive)
+		i32 v = fix32(nVel).raw >> 8;
+		bbBuffer[bufferPos++] = v;
+		bbBuffer[bufferPos++] = v >> 8;
+		v = fix32(eVel).raw >> 8;
+		bbBuffer[bufferPos++] = v;
+		bbBuffer[bufferPos++] = v >> 8;
 	}
 #if BLACKBOX_STORAGE == LITTLEFS
 	blackboxFile.write(bbBuffer, bufferPos);

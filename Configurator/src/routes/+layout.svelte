@@ -112,6 +112,9 @@
 				case MspFn.SET_RTC:
 					configuratorLog.push('RTC updated');
 					break;
+				case MspFn.SET_TZ_OFFSET:
+					configuratorLog.push('Timezone offset updated');
+					break;
 				case MspFn.PLAY_SOUND:
 					console.log(command.data);
 					break;
@@ -151,6 +154,14 @@
 					(now >> 8) & 0xff,
 					(now >> 16) & 0xff,
 					(now >> 24) & 0xff
+				]);
+			})
+			.then(() => delay(5))
+			.then(() => {
+				const offset = -new Date().getTimezoneOffset();
+				port.sendCommand('request', MspFn.SET_TZ_OFFSET, MspVersion.V2, [
+					offset & 0xff,
+					(offset >> 8) & 0xff
 				]);
 			});
 	}

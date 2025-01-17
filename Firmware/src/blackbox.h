@@ -45,6 +45,7 @@
 #define LOG_VVEL_SETPOINT (1LL << 39) // 2 bytes
 #define LOG_MAG_HEADING (1LL << 40) // 2 bytes
 #define LOG_COMBINED_HEADING (1LL << 41) // 2 bytes
+#define LOG_HVEL (1LL << 42) // 4 bytes
 
 #define LOG_HEAD_MAGIC 0
 #define LOG_HEAD_BB_VERSION 4

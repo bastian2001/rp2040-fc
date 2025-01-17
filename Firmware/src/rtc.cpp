@@ -4,6 +4,7 @@
 #define DAYS_IN_4_YEARS 1461
 
 u8 rtcTimeQuality = TIME_QUALITY_NONE;
+i16 rtcTimezoneOffset = 0;
 const u16 days[4][12] =
 	{
 		{0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335},
@@ -80,12 +81,6 @@ time_t rtcGetUnixTimestamp() {
 	t += (d.min) * 60;
 	t += d.sec;
 	return t;
-}
-
-u32 rtcGetBlackboxTimestamp() {
-	u32 s0 = rtc_hw->setup_0;
-	u32 s1 = rtc_hw->setup_1;
-	return (s1 & RTC_SETUP_1_SEC_BITS) | (s1 & RTC_SETUP_1_MIN_BITS) >> 2 | (s1 & RTC_SETUP_1_HOUR_BITS) >> 4 | (s0 & RTC_SETUP_0_DAY_BITS) << 17 | (s0 & RTC_SETUP_0_MONTH_BITS) << 14 | ((s0 & RTC_SETUP_0_YEAR_BITS) - (2000 << RTC_SETUP_0_YEAR_LSB)) << 14;
 }
 
 void setDotwInDatetime(datetime_t *t) {

@@ -57,6 +57,9 @@ public:
 	 * @param alpha The new alpha value
 	 */
 	void updateAlpha(fix32 alpha);
+	void add(fix32 value) {
+		y += value;
+	}
 	/// @brief Get the current value of the filter
 	inline operator fix32() const { return y; }
 

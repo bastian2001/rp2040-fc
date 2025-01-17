@@ -697,6 +697,26 @@
 			minValue: -180,
 			maxValue: 180,
 			unit: '°'
+		},
+		LOG_HVEL: {
+			name: 'Hor. Velocity',
+			path: 'motion.hvel',
+			minValue: -10,
+			maxValue: 10,
+			unit: 'm/s',
+			decimals: 2,
+			modifier: [
+				{
+					displayNameShort: 'North',
+					displayName: 'North',
+					path: 'n'
+				},
+				{
+					displayNameShort: 'East',
+					displayName: 'East',
+					path: 'e'
+				}
+			]
 		}
 	} as {
 		[key: string]: FlagProps;
@@ -1266,14 +1286,8 @@
 			return;
 		}
 		const version = header.slice(4, 7);
-		const sTime = leBytesToInt(header.slice(7, 11));
-		const year = sTime >> 26;
-		const month = (sTime >> 22) & 0b1111;
-		const day = (sTime >> 17) & 0b11111;
-		const hour = (sTime >> 12) & 0b11111;
-		const minute = (sTime >> 6) & 0b111111;
-		const second = sTime & 0b111111;
-		const startTime = new Date(year + 2000, month - 1, day, hour, minute, second);
+		const sTime = leBytesToInt(header.slice(7, 11)); // unix timestamp in seconds (UTC)
+		const startTime = new Date(sTime * 1000);
 		const pidFreq = 3200 / (1 + header[11]);
 		const freqDiv = header[12];
 		const rangeByte = header[13];
@@ -1331,6 +1345,7 @@
 				flags.push(Object.keys(BB_ALL_FLAGS)[i + 32]);
 				offsets[Object.keys(BB_ALL_FLAGS)[i + 32]] = frameSize;
 				if ([35, 36, 37].includes(i + 32)) frameSize += 6;
+				else if ([42].includes(i + 32)) frameSize += 4;
 				else frameSize += 2;
 			}
 		}
@@ -1344,7 +1359,7 @@
 				gyro: {},
 				pid: { roll: {}, pitch: {}, yaw: {} },
 				motors: { out: {}, rpm: {} },
-				motion: { gps: {}, accelRaw: {}, accelFiltered: {} },
+				motion: { gps: {}, accelRaw: {}, accelFiltered: {}, hvel: {} },
 				attitude: {}
 			};
 			if (flags.includes('LOG_ROLL_ELRS_RAW'))
@@ -1691,6 +1706,14 @@
 						180) /
 					Math.PI;
 			}
+			if (flags.includes('LOG_HVEL')) {
+				frame.motion.hvel.n =
+					leBytesToInt(data.slice(i + offsets['LOG_HVEL'], i + offsets['LOG_HVEL'] + 2), true) /
+					256;
+				frame.motion.hvel.e =
+					leBytesToInt(data.slice(i + offsets['LOG_HVEL'] + 2, i + offsets['LOG_HVEL'] + 4), true) /
+					256;
+			}
 			log.push(frame);
 		}
 		loadedLog = {
@@ -1749,14 +1772,8 @@
 			const fileSize =
 				data[i + 1] + data[i + 2] * 256 + data[i + 3] * 256 * 256 + data[i + 4] * 256 * 256 * 256;
 			const bbVersion = data[i + 5] * 256 * 256 + data[i + 6] * 256 + data[i + 7];
-			const sTime = leBytesToInt(data.slice(i + 8, i + 12));
-			const year = sTime >> 26;
-			const month = (sTime >> 22) & 0b1111;
-			const day = (sTime >> 17) & 0b11111;
-			const hour = (sTime >> 12) & 0b11111;
-			const minute = (sTime >> 6) & 0b111111;
-			const second = sTime & 0b111111;
-			const startTime = new Date(year + 2000, month - 1, day, hour, minute, second);
+			const sTime = leBytesToInt(data.slice(i + 8, i + 12), false); // unix timestamp in seconds (UTC)
+			const startTime = new Date(sTime * 1000);
 			const pidFreq = 3200 / (data[i + 12] + 1);
 			const freqDiv = data[i + 13];
 			const flags = data.slice(i + 14, i + 22);
@@ -1937,7 +1954,7 @@
 						: getNestedProperty(sliceAndSkip[0], path, {
 								max: Math.max(trace.maxValue, trace.minValue),
 								min: Math.min(trace.minValue, trace.maxValue)
-						  })) -
+							})) -
 						trace.minValue) *
 						scale;
 				ctx.moveTo(0, pointY);
@@ -1950,7 +1967,7 @@
 							: getNestedProperty(sliceAndSkip[k], path, {
 									max: Math.max(trace.maxValue, trace.minValue),
 									min: Math.min(trace.minValue, trace.maxValue)
-							  })) -
+								})) -
 							trace.minValue) *
 							scale;
 					ctx.lineTo(k * frameWidth, pointY);
@@ -2049,11 +2066,11 @@
 									trace.overrideSliceAndSkip![closestFrameSliceSkip],
 									trace.minValue,
 									trace.maxValue
-							  )
+								)
 							: getNestedProperty(frame, path, {
 									max: Math.max(trace.maxValue, trace.minValue),
 									min: Math.min(trace.minValue, trace.maxValue)
-							  })) -
+								})) -
 							trace.minValue) *
 							scale;
 					ctx.beginPath();

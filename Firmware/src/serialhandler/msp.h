@@ -115,6 +115,10 @@ enum class MspFn {
 	// 0x418_ Receiver
 	GET_RX_STATUS = 0x4180,
 
+	// 0x41F_ Misc (not worth a category)
+	GET_TZ_OFFSET = 0x41F0,
+	SET_TZ_OFFSET = 0x41F1,
+
 	// 0x42__ Tuning
 	GET_PIDS = 0x4200,
 	SET_PIDS = 0x4201,
